@@ -52,7 +52,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "0.25 auto /Users/heestand-xyz/Desktop/DCIM/Select /Users/heestand-xyz/Desktop/DCIM/Select-Export"
+            argument = "0.25 1000x1000 /Users/heestand-xyz/Desktop/DCIM/100NZ_50_JPG/C\ -\ 300mm /Users/heestand-xyz/Desktop/DCIM/100NZ_50_CROP/C\ -\ 300mm\ 2"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

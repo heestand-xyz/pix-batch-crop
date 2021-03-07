@@ -48,6 +48,7 @@ if resArg == "auto" {
     }
     resolution = .custom(w: resWidth, h: resHeight)
 }
+let autoResolution: Bool = resolution == nil
 
 let inputFolderURL: URL = getURL(args[3])
 var inputFolderIsDir: ObjCBool = false
@@ -75,6 +76,9 @@ if outputFolderExists {
 
 let imagePix = ImagePIX()
 
+let backgroundPix = ColorPIX(at: resolution ?? ._128)
+backgroundPix.backgroundColor = .black
+
 let horizontalReducePix = ReducePIX()
 horizontalReducePix.method = .max
 horizontalReducePix.input = imagePix
@@ -86,7 +90,7 @@ verticalReducePix.input = imagePix._flopRight()
 let cropPix = CropPIX()
 cropPix.input = imagePix
 
-let finalPix: PIX & NODEOut = cropPix
+let finalPix: PIX & NODEOut = backgroundPix & cropPix
 
 // MARK: - Images
 
@@ -212,16 +216,57 @@ for (i, fileName) in fileNames.enumerated() {
     let cropResolution: Resolution = resolution ?? .cgSize(CGSize(width: verticalScale * imageResolution.width.cg,
                                                                   height: horizontalScale * imageResolution.height.cg))
     
+    backgroundPix.resolution = cropResolution
+    
     let cropFactor: CGVector = CGVector(dx: CGFloat(cropResolution.w) / CGFloat(imageResolution.w),
                                         dy: CGFloat(cropResolution.h) / CGFloat(imageResolution.h))
 
     let uvCenter: CGVector = CGVector(dx: verticalCenter, dy: 1.0 - horizontalCenter)
 
-    cropPix.cropLeft = uvCenter.dx - cropFactor.dx / 2.0
-    cropPix.cropRight = uvCenter.dx + cropFactor.dx / 2.0
-    cropPix.cropBottom = uvCenter.dy - cropFactor.dy / 2.0
-    cropPix.cropTop = uvCenter.dy + cropFactor.dy / 2.0
+    let cropLeft: CGFloat = uvCenter.dx - cropFactor.dx / 2.0
+    let cropRight: CGFloat = uvCenter.dx + cropFactor.dx / 2.0
+    let cropBottom: CGFloat = uvCenter.dy - cropFactor.dy / 2.0
+    let cropTop: CGFloat = uvCenter.dy + cropFactor.dy / 2.0
+    
+//    if !autoResolution {
+//
+//        func roundBy10(_ value: CGFloat) -> CGFloat {
+//            round(value * 10) / 10
+//        }
+//
+//        while roundBy10((cropRight - cropLeft) * imageResolution.width.cg) != roundBy10(cropResolution.width.cg) {
+//            let fraction: CGFloat = 0.1 * (1.0 / roundBy10(cropResolution.width.cg))
+//            if roundBy10((cropRight - cropLeft) * imageResolution.width.cg) < roundBy10(cropResolution.width.cg) {
+//                cropLeft -= fraction
+//                cropRight += fraction
+//                print("nudge +")
+//            } else {
+//                cropLeft += fraction
+//                cropRight -= fraction
+//                print("nudge -")
+//            }
+//        }
+//
+//        while roundBy10((cropTop - cropBottom) * imageResolution.height.cg) != roundBy10(cropResolution.height.cg) {
+//            let fraction: CGFloat = 0.1 * (1.0 / roundBy10(cropResolution.height.cg))
+//            if roundBy10((cropTop - cropBottom) * imageResolution.height.cg) < roundBy10(cropResolution.height.cg) {
+//                cropBottom -= fraction
+//                cropTop += fraction
+//                print("nudge +")
+//            } else {
+//                cropBottom += fraction
+//                cropTop -= fraction
+//                print("nudge -")
+//            }
+//        }
+//
+//    }
 
+    cropPix.cropLeft = cropLeft
+    cropPix.cropRight = cropRight
+    cropPix.cropBottom = cropBottom
+    cropPix.cropTop = cropTop
+    
     print("\(i + 1)/\(count) will render")
     var outImg: NSImage!
     let group = DispatchGroup()
@@ -230,6 +275,11 @@ for (i, fileName) in fileNames.enumerated() {
         guard let img: NSImage = finalPix.renderedImage else {
             print("\(i + 1)/\(count) render failed")
             exit(EXIT_FAILURE)
+        }
+        if !autoResolution {
+            guard img.size == cropResolution.size.cg else {
+                fatalError("bad resolution: \(img.size)")
+            }
         }
         outImg = img
         group.leave()
